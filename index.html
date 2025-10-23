@@ -1,0 +1,226 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GymLocal Pro - Edición Animada</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap');
+  body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    color: #fff;
+    background: linear-gradient(120deg, #000, #030303, #0f0f0f);
+    overflow-x: hidden;
+  }
+  .background {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: url('https://images.unsplash.com/photo-1579758629938-03607ccdbaba?auto=format&fit=crop&w=1740&q=80') no-repeat center center/cover;
+    filter: brightness(0.25) blur(4px);
+    z-index: -1;
+  }
+  .login-box {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(20, 20, 20, 0.9);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 0 20px #0f0;
+    width: 350px;
+    text-align: center;
+    animation: fadeIn 1s ease-in-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translate(-50%, -40%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+  }
+  h2 { color: #0f0; margin-bottom: 20px; }
+  input {
+    width: 90%; padding: 10px; margin: 10px 0;
+    border: none; border-radius: 5px;
+  }
+  button {
+    width: 95%; padding: 10px;
+    border: none; border-radius: 5px;
+    background: #0f0; color: #000;
+    font-weight: bold; cursor: pointer;
+    transition: 0.3s;
+  }
+  button:hover { background: #0c0; }
+  .calendar-container {
+    display: none; padding: 40px; text-align: center;
+  }
+  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-top: 20px; }
+  .day {
+    background: #111; border: 1px solid #0f0;
+    border-radius: 10px; padding: 10px; min-height: 150px;
+    transition: 0.3s; box-shadow: 0 0 10px #020;
+  }
+  .day:hover { transform: scale(1.03); box-shadow: 0 0 20px #0f0; }
+  .class-card { background: #222; border-left: 5px solid #0f0; margin: 5px 0; padding: 5px; border-radius: 5px; }
+  .admin-panel { margin: 30px auto; background: #181818; padding: 20px; border-radius: 15px; width: 80%; box-shadow: 0 0 10px #060; }
+  .logout { margin-top: 20px; background: #900; color: #fff; }
+</style>
+</head>
+<body>
+<div class="background"></div>
+
+<div id="loginBox" class="login-box">
+  <h2>🏋️‍♂️ GymLocal Pro</h2>
+  <input id="user" type="text" placeholder="Usuario o Correo">
+  <input id="pass" type="password" placeholder="Contraseña">
+  <button onclick="login()">Ingresar</button>
+  <hr>
+  <h3>Registro Cliente</h3>
+  <input id="newName" type="text" placeholder="Nombre completo">
+  <input id="newEmail" type="email" placeholder="Correo">
+  <input id="newPass" type="password" placeholder="Contraseña">
+  <button onclick="registerUser()">Registrarse</button>
+</div>
+
+<div id="calendarContainer" class="calendar-container">
+  <h2>📅 Clases Semanales</h2>
+  <div id="adminPanel" class="admin-panel" style="display:none;">
+    <h3>Panel del Profesor</h3>
+    <input id="className" type="text" placeholder="Nombre de la clase">
+    <input id="classTime" type="datetime-local">
+    <select id="locations" multiple style="width:90%;padding:10px;border-radius:5px;margin-top:10px;"></select>
+    <button onclick="addClass()">Agregar Clase</button>
+    <h4>Direcciones:</h4>
+    <div id="addressList"></div>
+    <input id="newAddress" type="text" placeholder="Nueva dirección">
+    <button onclick="addAddress()">Agregar Dirección</button>
+  </div>
+  <div class="calendar" id="calendar"></div>
+  <button class="logout" onclick="logout()">Cerrar Sesión</button>
+</div>
+
+<script>
+let addresses = JSON.parse(localStorage.getItem('addresses')) || [
+  "Calle 10 #23-45 - Gimnasio FitZone",
+  "Carrera 8 #15-20 - PowerGym",
+  "Av. Las Palmas #12 - Zona Activa",
+  "Calle 50 #8-30 - UrbanFit",
+  "Carrera 30 #5-16 - StrongBody",
+  "Calle 100 #22-15 - Titan Gym"
+];
+let classes = JSON.parse(localStorage.getItem('classes')) || [];
+let users = JSON.parse(localStorage.getItem('users')) || [];
+let currentUser = null;
+
+function saveAll() {
+  localStorage.setItem('addresses', JSON.stringify(addresses));
+  localStorage.setItem('classes', JSON.stringify(classes));
+  localStorage.setItem('users', JSON.stringify(users));
+}
+
+function renderAddresses() {
+  const sel = document.getElementById("locations");
+  const list = document.getElementById("addressList");
+  sel.innerHTML = "";
+  list.innerHTML = "";
+  addresses.forEach((a, i) => {
+    sel.innerHTML += `<option value="${a}">${a}</option>`;
+    list.innerHTML += `<div>${a} <button onclick="removeAddress(${i})">❌</button></div>`;
+  });
+}
+
+function addAddress() {
+  const addr = document.getElementById("newAddress").value.trim();
+  if (addr) {
+    addresses.push(addr);
+    document.getElementById("newAddress").value = "";
+    saveAll();
+    renderAddresses();
+  }
+}
+
+function removeAddress(i) {
+  addresses.splice(i, 1);
+  saveAll();
+  renderAddresses();
+}
+
+function login() {
+  const u = document.getElementById("user").value;
+  const p = document.getElementById("pass").value;
+  if (u === "yesidlan" && p === "lancheros") {
+    currentUser = { role: "admin", name: "Profesor" };
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("calendarContainer").style.display = "block";
+    document.getElementById("adminPanel").style.display = "block";
+    renderAddresses();
+    renderCalendar();
+  } else {
+    const user = users.find(x => x.email === u && x.password === p);
+    if (user) {
+      currentUser = { role: "client", name: user.name };
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("calendarContainer").style.display = "block";
+      document.getElementById("adminPanel").style.display = "none";
+      renderCalendar();
+    } else alert("Usuario o contraseña incorrectos");
+  }
+}
+
+function registerUser() {
+  const n = document.getElementById("newName").value;
+  const e = document.getElementById("newEmail").value;
+  const p = document.getElementById("newPass").value;
+  if (!n || !e || !p) return alert("Completa todos los campos");
+  if (users.some(u => u.email === e)) return alert("Este correo ya está registrado");
+  users.push({ name: n, email: e, password: p });
+  saveAll();
+  alert("Registro exitoso. (Clave enviada por correo simulado)");
+}
+
+function addClass() {
+  const name = document.getElementById("className").value;
+  const time = document.getElementById("classTime").value;
+  const locs = Array.from(document.getElementById("locations").selectedOptions).map(o => o.value);
+  if (!name || !time || locs.length === 0) return alert("Completa todos los campos");
+  classes.push({ name, time, locs });
+  saveAll();
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const c = document.getElementById("calendar");
+  c.innerHTML = "";
+  for (let i=0; i<7; i++) {
+    const d = document.createElement("div");
+    d.className = "day";
+    d.innerHTML = `<b>${['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][i]}</b>`;
+    classes.forEach((cl, idx) => {
+      d.innerHTML += `<div class='class-card'>
+        <b>${cl.name}</b><br>
+        ${new Date(cl.time).toLocaleString()}<br>
+        <small>${cl.locs.join(", ")}</small><br>
+        ${currentUser.role==='admin'?`<button onclick='deleteClass(${idx})'>Eliminar</button>`:`<button onclick='joinClass(${idx})'>Unirme</button>`}
+      </div>`;
+    });
+    c.appendChild(d);
+  }
+}
+
+function deleteClass(i) {
+  classes.splice(i,1);
+  saveAll();
+  renderCalendar();
+}
+
+function joinClass(i) {
+  alert(`Te has inscrito en la clase: ${classes[i].name}`);
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById("calendarContainer").style.display = "none";
+  document.getElementById("loginBox").style.display = "block";
+}
+</script>
+</body>
+</html>
